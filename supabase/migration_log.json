@@ -1,0 +1,144 @@
+{
+  "timestamp": "2026-11-07T12:28:11.913Z",
+  "supabase_url": "https://tuxxcwbwleqnrnmxuhkj.supabase.co",
+  "total_sqlite_records": 2084,
+  "total_migrated_records": 2084,
+  "results": [
+    {
+      "table": "profiles",
+      "sqliteCount": 5,
+      "migratedCount": 5,
+      "remoteCount": 5,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "subjects",
+      "sqliteCount": 3,
+      "migratedCount": 3,
+      "remoteCount": 3,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "categories",
+      "sqliteCount": 4,
+      "migratedCount": 4,
+      "remoteCount": 4,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "chapters",
+      "sqliteCount": 49,
+      "migratedCount": 49,
+      "remoteCount": 49,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "questions",
+      "sqliteCount": 850,
+      "migratedCount": 850,
+      "remoteCount": 850,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "mock_tests",
+      "sqliteCount": 259,
+      "migratedCount": 259,
+      "remoteCount": 259,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "mock_test_questions",
+      "sqliteCount": 849,
+      "migratedCount": 849,
+      "remoteCount": 849,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "sample_papers",
+      "sqliteCount": 5,
+      "migratedCount": 5,
+      "remoteCount": 5,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "pyq_questions",
+      "sqliteCount": 4,
+      "migratedCount": 4,
+      "remoteCount": 4,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "payments",
+      "sqliteCount": 2,
+      "migratedCount": 2,
+      "remoteCount": 2,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "memberships",
+      "sqliteCount": 2,
+      "migratedCount": 2,
+      "remoteCount": 2,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "test_attempts",
+      "sqliteCount": 7,
+      "migratedCount": 7,
+      "remoteCount": 7,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "student_answers",
+      "sqliteCount": 15,
+      "migratedCount": 15,
+      "remoteCount": 15,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "appointments",
+      "sqliteCount": 2,
+      "migratedCount": 2,
+      "remoteCount": 3,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "site_settings",
+      "sqliteCount": 6,
+      "migratedCount": 6,
+      "remoteCount": 6,
+      "status": "SUCCESS",
+      "primaryKey": "key"
+    },
+    {
+      "table": "audit_logs",
+      "sqliteCount": 20,
+      "migratedCount": 20,
+      "remoteCount": 20,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    },
+    {
+      "table": "backup_records",
+      "sqliteCount": 2,
+      "migratedCount": 2,
+      "remoteCount": 2,
+      "status": "SUCCESS",
+      "primaryKey": "id"
+    }
+  ]
+}

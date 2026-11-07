@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 240" width="100%" height="100%">
+  <rect width="100%" height="100%" fill="#f8fafc" rx="8" />
+  <circle cx="140" cy="120" r="60" fill="#eff6ff" stroke="#2563eb" stroke-width="2.5" />
+  <circle cx="140" cy="120" r="3.5" fill="#1e3a8a" />
+  <text x="145" y="115" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1e3a8a">O</text>
+  <!-- Chord PQ -->
+  <line x1="176" y1="72" x2="176" y2="168" stroke="#16a34a" stroke-width="2" />
+  <!-- Tangents TP and TQ meeting at T(290, 120) -->
+  <line x1="176" y1="72" x2="290" y2="120" stroke="#0f172a" stroke-width="2.5" />
+  <line x1="176" y1="168" x2="290" y2="120" stroke="#0f172a" stroke-width="2.5" />
+  <!-- Center line OT -->
+  <line x1="140" y1="120" x2="290" y2="120" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,3" />
+  <line x1="140" y1="120" x2="176" y2="72" stroke="#dc2626" stroke-width="2" />
+  <!-- Vertices -->
+  <circle cx="176" cy="72" r="3.5" fill="#0f172a" />
+  <text x="175" y="58" font-family="sans-serif" font-size="13" font-weight="bold" fill="#0f172a">P</text>
+  <circle cx="176" cy="168" r="3.5" fill="#0f172a" />
+  <text x="175" y="190" font-family="sans-serif" font-size="13" font-weight="bold" fill="#0f172a">Q</text>
+  <circle cx="290" cy="120" r="3.5" fill="#0f172a" />
+  <text x="300" y="125" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0f172a">T</text>
+  <text x="182" y="125" font-family="sans-serif" font-size="11" fill="#16a34a">8 cm</text>
+  <text x="140" y="90" font-family="sans-serif" font-size="11" fill="#dc2626">r = 5</text>
+</svg>

@@ -1,0 +1,6 @@
+{
+  "name": "VEDICX - Class 10 Mock Tests & Preparation",
+  "description": "Prepare Smarter. Score Better. Practice Class 10 chapter-wise mock tests, solve sample papers and prepare with previous year questions on VEDICX.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

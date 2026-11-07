@@ -1,0 +1,723 @@
+import React, { useState, useEffect } from 'react';
+import {
+  FileCheck,
+  PlusCircle,
+  Search,
+  Filter,
+  Eye,
+  Edit,
+  Trash2,
+  Upload,
+  Image as ImageIcon,
+  CheckCircle2,
+  X,
+  BookOpen,
+  Calendar,
+  Award
+} from 'lucide-react';
+import { Subject, Chapter, PYQ } from '../../types';
+import { api } from '../../services/api';
+
+interface PyqsTabProps {
+  subjects: Subject[];
+  showNotification: (type: 'success' | 'error', msg: string) => void;
+}
+
+export const PyqsTab: React.FC<PyqsTabProps> = ({ subjects, showNotification }) => {
+  const [pyqs, setPyqs] = useState<PYQ[]>([]);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedYear, setSelectedYear] = useState<string>('');
+  const [selectedChapter, setSelectedChapter] = useState<string>('');
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [search, setSearch] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+
+  // Modals
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editingPyq, setEditingPyq] = useState<PYQ | null>(null);
+  const [previewPyq, setPreviewPyq] = useState<PYQ | null>(null);
+
+  // Form State
+  const [fSubjectId, setFSubjectId] = useState(subjects[0]?.id || 'science');
+  const [fChapterId, setFChapterId] = useState('');
+  const [fFormChapters, setFFormChapters] = useState<Chapter[]>([]);
+  const [fTopic, setFTopic] = useState('');
+  const [fYear, setFYear] = useState('2024');
+  const [fQuestionType, setFQuestionType] = useState('Short Answer');
+  const [fQuestionText, setFQuestionText] = useState('');
+  const [fMarks, setFMarks] = useState(3);
+  const [fSolutionText, setFSolutionText] = useState('');
+  const [fFileUrl, setFFileUrl] = useState('');
+  const [fStatus, setFStatus] = useState<'published' | 'draft'>('published');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadPyqs = async () => {
+    try {
+      setLoading(true);
+      const params: any = { role: 'admin' };
+      if (selectedSubject) params.subject_id = selectedSubject;
+      if (selectedYear) params.year = selectedYear;
+      if (selectedChapter) params.chapter_id = selectedChapter;
+      if (search) params.search = search;
+
+      const res = await api.getPyqs(params);
+      setPyqs(res.pyqs);
+      if (res.available_years) setAvailableYears(res.available_years);
+    } catch (err: any) {
+      showNotification('error', err.message || 'Failed to load PYQs');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPyqs();
+  }, [selectedSubject, selectedYear, selectedChapter]);
+
+  // Load filter chapters
+  useEffect(() => {
+    async function loadFilterChapters() {
+      if (!selectedSubject) {
+        setChapters([]);
+        setSelectedChapter('');
+        return;
+      }
+      try {
+        const res = await api.getChapters(selectedSubject);
+        setChapters(res.chapters);
+      } catch {
+        setChapters([]);
+      }
+    }
+    loadFilterChapters();
+  }, [selectedSubject]);
+
+  // Load form chapters
+  useEffect(() => {
+    async function loadFormChapters() {
+      if (!fSubjectId) {
+        setFFormChapters([]);
+        setFChapterId('');
+        return;
+      }
+      try {
+        const res = await api.getChapters(fSubjectId);
+        setFFormChapters(res.chapters);
+        if (res.chapters.length > 0 && !editingPyq) {
+          setFChapterId(res.chapters[0].id);
+        }
+      } catch {
+        setFFormChapters([]);
+      }
+    }
+    loadFormChapters();
+  }, [fSubjectId]);
+
+  const resetForm = () => {
+    setFSubjectId(subjects[0]?.id || 'science');
+    setFChapterId('');
+    setFTopic('');
+    setFYear('2024');
+    setFQuestionType('Short Answer');
+    setFQuestionText('');
+    setFMarks(3);
+    setFSolutionText('');
+    setFFileUrl('');
+    setFStatus('published');
+    setEditingPyq(null);
+  };
+
+  const openCreateModal = () => {
+    resetForm();
+    setCreateModalOpen(true);
+  };
+
+  const openEditModal = (q: PYQ) => {
+    setEditingPyq(q);
+    setFSubjectId(q.subject_id);
+    setFChapterId(q.chapter_id || '');
+    setFTopic(q.topic || '');
+    setFYear(String(q.year));
+    setFQuestionType(q.question_type || 'Short Answer');
+    setFQuestionText(q.question_text);
+    setFMarks(q.marks || 3);
+    setFSolutionText(q.solution_text || '');
+    setFFileUrl(q.file_url || '');
+    setFStatus((q.status as any) || 'published');
+    setCreateModalOpen(true);
+  };
+
+  const handleImageUpload = async (file: File) => {
+    try {
+      setUploadingImage(true);
+      const res = await api.uploadFile(file);
+      setFFileUrl(res.file.file_url);
+      showNotification('success', 'Diagram uploaded successfully.');
+    } catch (err: any) {
+      showNotification('error', err.message || 'Image upload failed');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fQuestionText.trim() || !fSolutionText.trim()) {
+      showNotification('error', 'Question text and marking scheme solution are required.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const payload: any = {
+        subject_id: fSubjectId,
+        chapter_id: fChapterId || null,
+        topic: fTopic.trim(),
+        year: Number(fYear),
+        question_type: fQuestionType,
+        question_text: fQuestionText.trim(),
+        marks: Number(fMarks),
+        solution_text: fSolutionText.trim(),
+        file_url: fFileUrl.trim() || null,
+        status: fStatus
+      };
+
+      if (editingPyq) {
+        await api.updatePyq(editingPyq.id, payload);
+        showNotification('success', 'PYQ record updated successfully.');
+      } else {
+        await api.createPyq(payload);
+        showNotification('success', 'Authentic PYQ added to question repository.');
+      }
+
+      setCreateModalOpen(false);
+      resetForm();
+      loadPyqs();
+    } catch (err: any) {
+      showNotification('error', err.message || 'Operation failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this authentic PYQ record?')) return;
+    try {
+      await api.deletePyq(id);
+      showNotification('success', 'PYQ deleted successfully.');
+      loadPyqs();
+    } catch (err: any) {
+      showNotification('error', err.message || 'Failed to delete PYQ');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Top Header Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            <span>Previous Year Questions</span>
+            <span className="text-xs px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 font-bold font-mono">
+              {pyqs.length} Total
+            </span>
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Manage authentic CBSE Class 10 board examination questions with step-by-step marking scheme solutions.
+          </p>
+        </div>
+
+        <button
+          onClick={openCreateModal}
+          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-600/20 flex items-center gap-2 cursor-pointer transition-colors"
+        >
+          <PlusCircle className="w-4 h-4" />
+          <span>+ Add Verified PYQ</span>
+        </button>
+      </div>
+
+      {/* Filter Toolbar */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+          <input
+            type="text"
+            placeholder="Search PYQ text, topic..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && loadPyqs()}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <select
+          value={selectedSubject}
+          onChange={e => setSelectedSubject(e.target.value)}
+          className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700"
+        >
+          <option value="">All Subjects</option>
+          {subjects.map(s => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+
+        {chapters.length > 0 && (
+          <select
+            value={selectedChapter}
+            onChange={e => setSelectedChapter(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 max-w-[180px]"
+          >
+            <option value="">All Chapters</option>
+            {chapters.map(c => (
+              <option key={c.id} value={c.id}>
+                Ch {c.chapter_number}: {c.name}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <select
+          value={selectedYear}
+          onChange={e => setSelectedYear(e.target.value)}
+          className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700"
+        >
+          <option value="">All Exam Years</option>
+          {availableYears.map(y => (
+            <option key={y} value={y}>
+              CBSE {y}
+            </option>
+          ))}
+          {/* Default popular years */}
+          {(!availableYears.includes(2024)) && <option value="2024">CBSE 2024</option>}
+          {(!availableYears.includes(2023)) && <option value="2023">CBSE 2023</option>}
+          {(!availableYears.includes(2022)) && <option value="2022">CBSE 2022</option>}
+          {(!availableYears.includes(2020)) && <option value="2020">CBSE 2020</option>}
+        </select>
+
+        <button
+          onClick={loadPyqs}
+          className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl cursor-pointer"
+        >
+          Filter
+        </button>
+      </div>
+
+      {/* PYQ Table */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        {loading ? (
+          <div className="p-12 text-center text-xs text-slate-400">Loading authentic PYQ records...</div>
+        ) : pyqs.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <FileCheck className="w-10 h-10 text-slate-300 mx-auto" />
+            <div className="text-sm font-bold text-slate-700">No Previous Year Questions found</div>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              No PYQ records match your active search or filter criteria. Add verified CBSE board questions to populate this bank.
+            </p>
+            <button
+              onClick={openCreateModal}
+              className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold"
+            >
+              + Add First Verified PYQ
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-bold">
+                <tr>
+                  <th className="p-3.5">Board Exam Year</th>
+                  <th className="p-3.5">Question & Topic</th>
+                  <th className="p-3.5">Subject & Chapter</th>
+                  <th className="p-3.5">Marks</th>
+                  <th className="p-3.5">Diagram</th>
+                  <th className="p-3.5">Status</th>
+                  <th className="p-3.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {pyqs.map(q => (
+                  <tr key={q.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="p-3.5">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 font-black text-blue-900 font-mono">
+                        <Calendar className="w-3 h-3 text-blue-600" />
+                        <span>CBSE {q.year}</span>
+                      </div>
+                    </td>
+                    <td className="p-3.5 max-w-md">
+                      <div className="font-bold text-slate-900 line-clamp-2">{q.question_text}</div>
+                      {q.topic && (
+                        <div className="text-[11px] text-blue-600 font-medium mt-0.5">
+                          Topic: {q.topic}
+                        </div>
+                      )}
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        Type: {q.question_type || 'Subjective'}
+                      </div>
+                    </td>
+                    <td className="p-3.5">
+                      <div className="font-semibold text-slate-800">{q.subject_name || q.subject_id}</div>
+                      <div className="text-[11px] text-slate-500 truncate max-w-[160px]">
+                        {q.chapter_name || 'General Chapter'}
+                      </div>
+                    </td>
+                    <td className="p-3.5">
+                      <span className="font-black text-slate-900 text-xs px-2 py-0.5 rounded bg-slate-100">
+                        {q.marks} {q.marks === 1 ? 'Mark' : 'Marks'}
+                      </span>
+                    </td>
+                    <td className="p-3.5">
+                      {q.file_url ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 text-[10px] font-bold">
+                          <ImageIcon className="w-3 h-3 text-emerald-600" />
+                          <span>Diagram Attached</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">None</span>
+                      )}
+                    </td>
+                    <td className="p-3.5">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                          q.status === 'published'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {q.status}
+                      </span>
+                    </td>
+                    <td className="p-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => setPreviewPyq(q)}
+                          className="p-1.5 text-slate-500 hover:text-blue-600 rounded hover:bg-slate-100"
+                          title="Preview Question & Marking Scheme"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openEditModal(q)}
+                          className="p-1.5 text-slate-500 hover:text-indigo-600 rounded hover:bg-slate-100"
+                          title="Edit Question"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(q.id)}
+                          className="p-1.5 text-slate-500 hover:text-rose-600 rounded hover:bg-slate-100"
+                          title="Delete PYQ Record"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* CREATE / EDIT PYQ MODAL */}
+      {createModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 border border-slate-200 shadow-2xl space-y-4 my-8">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">
+                  {editingPyq ? 'Edit Verified PYQ' : 'Add Authentic CBSE Board PYQ'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Provide verified CBSE Class 10 questions with official step-by-step solutions
+                </p>
+              </div>
+              <button
+                onClick={() => setCreateModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSave} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Subject *</label>
+                  <select
+                    value={fSubjectId}
+                    onChange={e => setFSubjectId(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-medium"
+                    required
+                  >
+                    {subjects.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Chapter</label>
+                  <select
+                    value={fChapterId}
+                    onChange={e => setFChapterId(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-medium"
+                  >
+                    <option value="">-- General / Multiple --</option>
+                    {fFormChapters.map(c => (
+                      <option key={c.id} value={c.id}>
+                        Ch {c.chapter_number}: {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Board Year *</label>
+                  <input
+                    type="number"
+                    min={2010}
+                    max={2030}
+                    value={fYear}
+                    onChange={e => setFYear(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-mono font-bold"
+                    placeholder="2024"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Topic</label>
+                  <input
+                    type="text"
+                    value={fTopic}
+                    onChange={e => setFTopic(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl"
+                    placeholder="e.g. Quadratic Formula, Photosynthesis"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Question Type</label>
+                  <select
+                    value={fQuestionType}
+                    onChange={e => setFQuestionType(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-medium"
+                  >
+                    <option value="Short Answer">Short Answer (2-3 Marks)</option>
+                    <option value="Long Answer">Long Answer (4-5 Marks)</option>
+                    <option value="Multiple Choice (MCQ)">Multiple Choice (MCQ)</option>
+                    <option value="Case-Based / Assertion">Case-Based / Assertion</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Marks *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={fMarks}
+                    onChange={e => setFMarks(Number(e.target.value))}
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Question Text (Authentic CBSE Exam Wording) *
+                </label>
+                <textarea
+                  rows={3}
+                  value={fQuestionText}
+                  onChange={e => setFQuestionText(e.target.value)}
+                  placeholder="Enter the authentic question as printed in the official CBSE Class 10 question paper..."
+                  className="w-full p-3 bg-slate-50 border rounded-xl text-slate-900 font-medium"
+                  required
+                />
+              </div>
+
+              {/* Diagram / Image Upload */}
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700 uppercase flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Optional Question Diagram / Figure</span>
+                  </label>
+                  {fFileUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setFFileUrl('')}
+                      className="text-[10px] text-rose-600 hover:underline font-bold"
+                    >
+                      Remove Diagram
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleImageUpload(e.target.files[0]);
+                      }
+                    }}
+                    className="text-[11px] text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                  />
+                  {uploadingImage && <span className="text-[11px] text-blue-600 animate-pulse">Uploading...</span>}
+                </div>
+
+                {fFileUrl && (
+                  <div className="mt-2 flex items-center gap-3 p-2 bg-white rounded-lg border">
+                    <img src={fFileUrl} alt="Diagram preview" className="h-16 w-16 object-contain rounded border" />
+                    <span className="text-[11px] font-mono text-slate-500 truncate">{fFileUrl}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Step-by-Step Marking Scheme Solution */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-slate-700 uppercase">
+                    Step-by-step Marking Scheme Solution *
+                  </label>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setFSolutionText(prev => prev + '\n**Step:** ')}
+                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700"
+                    >
+                      + Step
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFSolutionText(prev => prev + '\n[1 Mark] ')}
+                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700"
+                    >
+                      + Mark Tag
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  rows={5}
+                  value={fSolutionText}
+                  onChange={e => setFSolutionText(e.target.value)}
+                  placeholder="Detail the complete NCERT step-by-step solution according to CBSE marking guidelines:
+Step 1: Formula / concept
+Step 2: Substitution & Calculation
+Step 3: Final Answer with proper SI units"
+                  className="w-full p-3 bg-slate-50 border rounded-xl font-mono text-slate-900"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Status</label>
+                  <select
+                    value={fStatus}
+                    onChange={e => setFStatus(e.target.value as any)}
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-medium"
+                  >
+                    <option value="published">Published (Visible to Students)</option>
+                    <option value="draft">Draft (Admin Only)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCreateModalOpen(false)}
+                  className="px-4 py-2 border rounded-xl text-slate-600 font-bold hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting || uploadingImage}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{submitting ? 'Saving...' : editingPyq ? 'Update PYQ' : 'Save Verified PYQ'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* PREVIEW PYQ MODAL */}
+      {previewPyq && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 border border-slate-200 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 font-black font-mono text-xs">
+                  CBSE {previewPyq.year}
+                </span>
+                <span className="text-xs text-slate-500 font-bold uppercase">{previewPyq.subject_name}</span>
+              </div>
+              <button onClick={() => setPreviewPyq(null)} className="p-1 rounded-lg hover:bg-slate-100">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-500">Marks: {previewPyq.marks}</span>
+                {previewPyq.topic && (
+                  <span className="text-xs text-blue-600 font-semibold">{previewPyq.topic}</span>
+                )}
+              </div>
+              <p className="text-sm font-bold text-slate-900 leading-relaxed bg-slate-50 p-4 rounded-xl border">
+                {previewPyq.question_text}
+              </p>
+            </div>
+
+            {previewPyq.file_url && (
+              <div className="p-3 bg-slate-100 rounded-xl text-center">
+                <img
+                  src={previewPyq.file_url}
+                  alt="Diagram"
+                  className="max-h-56 mx-auto object-contain rounded-lg border shadow-xs"
+                />
+              </div>
+            )}
+
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+              <div className="text-xs font-black text-emerald-900 uppercase flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-emerald-600" />
+                <span>Official CBSE Marking Scheme Solution</span>
+              </div>
+              <div className="text-xs text-emerald-950 font-mono whitespace-pre-wrap leading-relaxed">
+                {previewPyq.solution_text}
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setPreviewPyq(null)}
+                className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
